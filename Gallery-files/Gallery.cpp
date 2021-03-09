@@ -30,12 +30,6 @@ int getCommandNumberFromUser()
 	
 	return std::atoi(input.c_str());
 }
-void Print_dev_name_and_curr_time()
-{
-	auto currtime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-	std::cout << "by adam shamis version 1.0.1, current time : " << ctime(&currtime) << std::endl;
-}
-
 int main(void)
 {
 	// initialization data access
@@ -47,7 +41,6 @@ int main(void)
 
 	std::string albumName;
 	std::cout << " Welcome to Gallery! " << std::endl;
-	Print_dev_name_and_curr_time();
 	std::cout << "===================" << std::endl;
 	std::cout << "Type " << HELP << " to a list of all supported commands" << std::endl;
 	
