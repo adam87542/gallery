@@ -96,7 +96,9 @@ const std::list<Album> DatabaseAccess::getAlbums()
 	const char* sqlStatement = "SELECT * FROM ALBUMS";
 	int res = sqlite3_exec(db, sqlStatement, callback_for_albums, nullptr, &errMessage);
 	check_status(errMessage, res);
-	return m_albums;
+	std::list<Album> copy = m_albums;
+	m_albums.clear();
+	return copy;
 }
 const std::list<Album> DatabaseAccess::getAlbumsOfUser(const User& user)
 {
@@ -104,7 +106,9 @@ const std::list<Album> DatabaseAccess::getAlbumsOfUser(const User& user)
 	const char* sqlStatement = "SELECT * FROM ALBUMS WHERE ID = " + user.getId();
 	int res = sqlite3_exec(db, sqlStatement, callback_for_albums, nullptr, &errMessage);
 	check_status(errMessage, res);
-	return m_albums;
+	std::list<Album> copy = m_albums;
+	m_albums.clear();
+	return copy;
 }
 void DatabaseAccess::createAlbum(const Album& album)
 {
@@ -112,6 +116,7 @@ void DatabaseAccess::createAlbum(const Album& album)
 	 std::string sqlStatement = "INSERT INTO ALBUMS(NAME  , CREATION_DATE, USER_ID) VALUES(" + album.getName() + ',' + album.getCreationDate() +  ',' + std::to_string(album.getOwnerId()) + "));";
 	int res = sqlite3_exec(db, sqlStatement.c_str(), nullptr, nullptr, &errMessage);
 	check_status(errMessage, res);
+	m_albums.clear();
 }
 void  DatabaseAccess::deleteAlbum(const std::string& albumName, int userId)
 {
@@ -128,6 +133,7 @@ bool DatabaseAccess::doesAlbumExists(const std::string& albumName, int userId)
 	int res = sqlite3_exec(db, sqlStatement, nullptr, nullptr, &errMessage);
 	if (!check_status(errMessage, res))
 		return false;
+	m_albums.clear();
 	return true;
 }
 Album  DatabaseAccess::openAlbum(const std::string& albumName)
@@ -137,7 +143,9 @@ Album  DatabaseAccess::openAlbum(const std::string& albumName)
 	int res = sqlite3_exec(db, sqlStatement, callback_for_albums, nullptr, &errMessage);
 	check_status(errMessage, res);
 	for (auto& album : m_albums) {
-		if (albumName == album.getName()) {
+		if (albumName == album.getName()) 
+		{
+			m_albums.clear();
 			return album;
 		}
 	}
@@ -149,4 +157,5 @@ void DatabaseAccess::printAlbums()
 	const char* sqlStatement = "SELECT * FROM ALBUMS;";
 	int res = sqlite3_exec(db, sqlStatement, callback_print, nullptr, &errMessage);
 	check_status(errMessage, res);
+	m_albums.clear();
 }
