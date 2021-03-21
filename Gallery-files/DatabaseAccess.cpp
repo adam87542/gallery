@@ -1,6 +1,31 @@
 #include "DatabaseAccess.h"
-
-
+int callback_for_albums(void* data, int argc, char** argv, char** azColName)
+{
+	Album album;
+	for (int i = 0; i < argc; i++)
+	{
+		if (std::string(azColName[i]) == "USER_ID") {
+			album.setOwner(atoi(argv[i]));
+		}
+		else if (std::string(azColName[i]) == "NAME") {
+			album.setName(argv[i]);
+		}
+		else if (std::string(azColName[i]) == "CREATION_DATE") {
+			album.setCreationDate(argv[i]);
+		}
+	}
+	 m_albums.push_back(album);
+	return 0;
+}
+int callback_print(void* data, int argc, char** argv, char** azColName)
+{
+	for (int i = 0; i < argc; i++)
+	{
+		cout << azColName[i] << " = " << argv[i] << " , ";
+	}
+	cout << endl;
+	return 0;
+}
 bool DatabaseAccess::open()
 {
 	const char* sqlStatement;
@@ -37,7 +62,7 @@ bool DatabaseAccess::open()
 			"FOREIGN KEY (ALBUM_ID) REFERENCES ALBUMS(ID));";
 		res = sqlite3_exec(db, sqlStatement, nullptr, nullptr, &errMessage);
 		check_status(errMessage, res);
-		sqlStatement = "CREATE TABLE TAGS(ID INTEGER PRIMARY KEY  NOT NULL,"
+		sqlStatement = "CREATE TABLE TAGS(ID INTEGER PRIMARY KEY  AUTOINCREMENT,"
 			"PICTURE_ID INTEGER NOT NULL,"
 			"USER_ID INTEGER NOT NULL,"
 			"FOREIGN KEY (PICTURE_ID) REFERENCES PICTURES(ID),"
@@ -47,18 +72,81 @@ bool DatabaseAccess::open()
 	}
 	return true;
 }
+
 void DatabaseAccess::close()
 {
 	sqlite3_close(this->db);
 	this->db = nullptr;
 }
-void DatabaseAccess::check_status(char* errMessage, int res)
+
+
+bool DatabaseAccess::check_status(char* errMessage, int res)
 {
 	if (res != SQLITE_OK)
 	{
 		std::cout << errMessage << std::endl;
-		sqlite3_close(db);
-		db = nullptr;
-		exit(-1);
+		return false;
 	}
+	return true;
+}
+
+const std::list<Album> DatabaseAccess::getAlbums()
+{
+	char* errMessage = nullptr;
+	const char* sqlStatement = "SELECT * FROM ALBUMS";
+	int res = sqlite3_exec(db, sqlStatement, callback_for_albums, nullptr, &errMessage);
+	check_status(errMessage, res);
+	return m_albums;
+}
+const std::list<Album> DatabaseAccess::getAlbumsOfUser(const User& user)
+{
+	char* errMessage = nullptr;
+	const char* sqlStatement = "SELECT * FROM ALBUMS WHERE ID = " + user.getId();
+	int res = sqlite3_exec(db, sqlStatement, callback_for_albums, nullptr, &errMessage);
+	check_status(errMessage, res);
+	return m_albums;
+}
+void DatabaseAccess::createAlbum(const Album& album)
+{
+	char* errMessage = nullptr;
+	 std::string sqlStatement = "INSERT INTO ALBUMS(NAME  , CREATION_DATE, USER_ID) VALUES(" + album.getName() + ',' + album.getCreationDate() +  ',' + std::to_string(album.getOwnerId()) + "));";
+	int res = sqlite3_exec(db, sqlStatement.c_str(), nullptr, nullptr, &errMessage);
+	check_status(errMessage, res);
+}
+void  DatabaseAccess::deleteAlbum(const std::string& albumName, int userId)
+{
+	char* errMessage = nullptr;
+	const char* sqlStatement = "DELETE * FROM ALBUMS WHERE USER_ID = " + userId + ';';
+	int res = sqlite3_exec(db, sqlStatement, nullptr, nullptr, &errMessage);
+	if (!check_status(errMessage, res))
+		throw MyException("No album with name " + albumName + " exists");
+}
+bool DatabaseAccess::doesAlbumExists(const std::string& albumName, int userId)
+{
+	char* errMessage = nullptr;
+	const char* sqlStatement = "SELECT * FROM ALBUMS WHERE USER_ID =" + userId + ';';
+	int res = sqlite3_exec(db, sqlStatement, nullptr, nullptr, &errMessage);
+	if (!check_status(errMessage, res))
+		return false;
+	return true;
+}
+Album  DatabaseAccess::openAlbum(const std::string& albumName)
+{
+	char* errMessage = nullptr;
+	const char* sqlStatement = "SELECT * FROM ALBUMS;";
+	int res = sqlite3_exec(db, sqlStatement, callback_for_albums, nullptr, &errMessage);
+	check_status(errMessage, res);
+	for (auto& album : m_albums) {
+		if (albumName == album.getName()) {
+			return album;
+		}
+	}
+	throw MyException("No album with name " + albumName + " exists");
+}
+void DatabaseAccess::printAlbums()
+{
+	char* errMessage = nullptr;
+	const char* sqlStatement = "SELECT * FROM ALBUMS;";
+	int res = sqlite3_exec(db, sqlStatement, callback_print, nullptr, &errMessage);
+	check_status(errMessage, res);
 }

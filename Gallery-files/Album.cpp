@@ -15,7 +15,14 @@ Album::Album(int ownerId, const std::string & name, const std::string & creation
 {
 	// Left empty
 }
-
+int Album::Id() const
+{
+	return m_AlbumId;
+}
+void Album::setId(int Id)
+{
+	this->m_AlbumId = Id;
+}
 
 const std::string& Album::getName() const
 {
