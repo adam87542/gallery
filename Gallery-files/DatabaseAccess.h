@@ -3,6 +3,7 @@
 #include "MyException.h"
 std::list<Album> m_albums;
 std::list<User> m_users;
+static int m_id;
 using std::cout; 
 using std::endl;
 class DatabaseAccess : public IDataAccess
@@ -19,7 +20,7 @@ public:
 	void deleteAlbum(const std::string& albumName, int userId) override;
 	bool doesAlbumExists(const std::string& albumName, int userId) override;
 	Album openAlbum(const std::string& albumName) override;
-	void closeAlbum(Album& pAlbum) override;
+	//void closeAlbum(Album& pAlbum) override;
 	void printAlbums() override;
 
 	// picture related
@@ -55,7 +56,6 @@ public:
 
 private:
 	sqlite3* db;
-
 
 	auto getAlbumIfExists(const std::string& albumName);
 
