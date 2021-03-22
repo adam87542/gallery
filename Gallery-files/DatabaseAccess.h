@@ -1,6 +1,7 @@
 #pragma once
 #include "IDataAccess.h"
 #include "MyException.h"
+#include "ItemNotFoundException.h"
 std::list<Album> m_albums;
 std::list<User> m_users;
 static int m_id;
@@ -47,7 +48,7 @@ public:
 	Picture getTopTaggedPicture() override;
 	std::list<Picture> getTaggedPicturesOfUser(const User& user) override;
 
-	//checks the sql rfequest
+	//checks the MESSAGE WE GOT BACK FROM THE SQLITE
 	bool check_status(char* errMessage, int res);
 
 
