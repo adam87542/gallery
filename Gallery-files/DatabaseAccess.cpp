@@ -17,6 +17,39 @@ int callback_for_albums(void* data, int argc, char** argv, char** azColName)
 	 m_albums.push_back(album);
 	return 0;
 }
+int callback_for_pictures(void* data, int argc, char** argv, char** azColName)
+{
+	Picture picture;
+	int id_of_album = 0;
+	for (int i = 0; i < argc; i++)
+	{
+		if (std::string(azColName[i]) == "ID") {
+		     picture.setId(atoi(argv[i]));
+		}
+		else if (std::string(azColName[i]) == "NAME") {
+			picture.setName(argv[i]);
+		}
+		else if (std::string(azColName[i]) == "CREATION_DATE") {
+			picture.setCreationDate(argv[i]);
+		}
+		else if (std::string(azColName[i]) == "LOCATION") {
+			picture.setPath(argv[i]);
+		}
+		else if (std::string(azColName[i]) == "Album_ID") {
+			id_of_album = (atoi(argv[i]));
+		}
+
+		for (auto& album : m_albums) {
+			if (id_of_album == album.Id())
+			{
+				picture.set_AlbumId(album.Id());
+				album.addPicture(picture);
+				break;
+			}
+		}
+	}
+	return 0;
+}
 int callback_for_users(void* data, int argc, char** argv, char** azColName)
 {
 	int user_id = 0;
@@ -42,6 +75,14 @@ int callback_print(void* data, int argc, char** argv, char** azColName)
 	}
 	cout << endl;
 	return 0;
+}
+int callback_tags(void* data, int argc, char** argv, char** azColName)
+{
+	if (argc < 1)
+	  is_taged = true;
+	else
+	  is_taged = false;
+	   return 0;
 }
 int callback_for_recevie(void* data, int argc, char** argv, char** azColName)
 {
@@ -294,8 +335,8 @@ bool DatabaseAccess::doesUserExists(int userId)
 User DatabaseAccess::getUser(int userId)
 {
 	char* errMessage = nullptr;
-	std::string sqlStatement = "SELECT * FROM USERS;";
-	int res = sqlite3_exec(db, sqlStatement.c_str(), callback_for_users, nullptr, &errMessage);
+	const char* sqlStatement = "SELECT * FROM USERS;";
+	int res = sqlite3_exec(db, sqlStatement, callback_for_users, nullptr, &errMessage);
 	check_status(errMessage, res);
 	for (const auto& user : m_users) {
 		if (user.getId() == userId) {
@@ -304,4 +345,88 @@ User DatabaseAccess::getUser(int userId)
 	}
 	m_users.clear();
 	throw ItemNotFoundException("User", userId);
+}
+int DatabaseAccess::countAlbumsOwnedOfUser(const User& user)
+{
+	char* errMessage = nullptr;
+	const char* sqlStatement = "SELECT * FROM ALBUMS;";
+	int res = sqlite3_exec(db, sqlStatement, callback_for_albums, nullptr, &errMessage);
+	check_status(errMessage, res);
+	int albumsCount = 0;
+
+	for (const auto& album : m_albums) {
+		if (album.getOwnerId() == user.getId()) {
+			++albumsCount;
+		}
+	}
+
+	return albumsCount;
+}
+int DatabaseAccess::countAlbumsTaggedOfUser(const User& user)
+{
+	char* errMessage = nullptr;
+	std::string sqlStatement = "SELECT * FROM ALBUMS;";
+	int res = sqlite3_exec(db, sqlStatement.c_str(), callback_for_albums, nullptr, &errMessage);
+	check_status(errMessage, res);
+	 sqlStatement = "SELECT * FROM PICTURES;";
+	 res = sqlite3_exec(db, sqlStatement.c_str(), callback_for_pictures, nullptr, &errMessage);
+	check_status(errMessage, res);
+	int albumsCount = 0;
+
+	for (const auto& album : m_albums)
+	{
+		const std::list<Picture>& pics = album.getPictures();
+		for (const auto& picture : pics)
+		{
+			 sqlStatement = "SELECT * FROM TAGS WHERE PICTURE_ID =" + std::to_string(picture.getId()) + ";";
+			 res = sqlite3_exec(db, sqlStatement.c_str(), callback_tags, nullptr, &errMessage);
+			check_status(errMessage, res);
+			if (is_taged)
+			{
+				albumsCount++;
+				break;
+			}
+		}
+	}
+	return albumsCount;
+}
+
+int DatabaseAccess::countTagsOfUser(const User& user)
+{
+	char* errMessage = nullptr;
+	 std::string sqlStatement = "SELECT * FROM ALBUMS;";
+	int res = sqlite3_exec(db, sqlStatement.c_str(), callback_for_albums, nullptr, &errMessage);
+	check_status(errMessage, res);
+	sqlStatement = "SELECT * FROM PICTURES;";
+	res = sqlite3_exec(db, sqlStatement.c_str(), callback_for_pictures, nullptr, &errMessage);
+	check_status(errMessage, res);
+	int tagsCount = 0;
+
+	for (const auto& album : m_albums) 
+	{
+		const std::list<Picture>& pics = album.getPictures();
+
+		for (const auto& picture : pics)
+		{
+			 sqlStatement = "SELECT * FROM TAGS WHERE  USER_ID =" + std::to_string(user.getId()) + ";";
+			res = sqlite3_exec(db, sqlStatement.c_str(), callback_tags, nullptr, &errMessage);
+			check_status(errMessage, res);
+			if (is_taged)
+			{
+				tagsCount++;
+			}
+		}
+	}
+
+	return tagsCount;
+}
+
+float DatabaseAccess::averageTagsPerAlbumOfUser(const User& user)
+{
+	int albumsTaggedCount = countAlbumsTaggedOfUser(user);
+	if (0 == albumsTaggedCount) {
+		return 0;
+	}
+
+	return static_cast<float>(countTagsOfUser(user)) / albumsTaggedCount;
 }

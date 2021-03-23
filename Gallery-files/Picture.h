@@ -8,11 +8,15 @@
 class Picture
 {
 public:
+	Picture() = default;
 	Picture(int id, const std::string& name);
 	Picture(int id, const std::string& name, const std::string& pathOnDisk, const std::string& creationDate);
 
 	int getId() const;
 	void setId(int id);
+
+	int get_AlbumId() const;
+	void set_AlbumId(int id);
 
 	const std::string& getName() const;
 	void setName(const std::string& name);
@@ -38,6 +42,7 @@ public:
 	friend std::ostream& operator<<(std::ostream& strout, const Picture& object);
 
 private:
+	int m_AlbumId;
 	int m_pictureId;
 	std::string m_name;
 	std::string m_pathOnDisk;

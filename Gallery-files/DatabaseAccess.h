@@ -2,9 +2,13 @@
 #include "IDataAccess.h"
 #include "MyException.h"
 #include "ItemNotFoundException.h"
+
 std::list<Album> m_albums;
 std::list<User> m_users;
 static int m_id;
+static bool is_taged;
+
+
 using std::cout; 
 using std::endl;
 class DatabaseAccess : public IDataAccess
