@@ -1,4 +1,5 @@
 #include "DatabaseAccess.h"
+sqlite3* DatabaseAccess::db;
 int callback_for_albums(void* data, int argc, char** argv, char** azColName)
 {
 	Album album;
@@ -78,8 +79,11 @@ int callback_print(void* data, int argc, char** argv, char** azColName)
 }
 int callback_tags(void* data, int argc, char** argv, char** azColName)
 {
-	if (argc < 1)
-	  is_taged = true;
+	if (argc > 1)
+	{
+		is_taged = true;
+		m_id = std::stoi(argv[1]);
+	}
 	else
 	  is_taged = false;
 	   return 0;
@@ -90,7 +94,7 @@ int callback_for_recevie(void* data, int argc, char** argv, char** azColName)
 	{
 		if (std::string(azColName[i]) == "ID")
 		{
-			m_id = std::stoi(argv[i]);
+			m_tag_value = std::stoi(argv[i]);
 			return 0;
 		}
 	}
@@ -102,7 +106,7 @@ bool DatabaseAccess::open()
 	char* errMessage = nullptr;
 	std::string dbFileName = "gallery.db";
 	int doesntExist = _access(dbFileName.c_str(), 0);
-	int res = sqlite3_open(dbFileName.c_str(), &this->db);
+	int res = sqlite3_open(dbFileName.c_str(), &db);
 	if (res != SQLITE_OK)
 	{
 		std::cout << "Error code: " << std::to_string(res) << std::endl;
@@ -144,8 +148,8 @@ bool DatabaseAccess::open()
 
 void DatabaseAccess::close()
 {
-	sqlite3_close(this->db);
-	this->db = nullptr;
+	sqlite3_close(db);
+	db = nullptr;
 }
 
 
@@ -429,4 +433,71 @@ float DatabaseAccess::averageTagsPerAlbumOfUser(const User& user)
 	}
 
 	return static_cast<float>(countTagsOfUser(user)) / albumsTaggedCount;
+}
+
+User DatabaseAccess::getTopTaggedUser()
+{
+	char* errMessage = nullptr;
+	std::string sqlStatement = "SELECT  USER_ID, COUNT(PICTURE__ID) AS 'value_occurrence' FROM  TAGS GROUP BY  USER_ID ORDER BY 'value_occurrence' DESC  LIMIT  1;";
+	int res = sqlite3_exec(db, sqlStatement.c_str(), callback_tags, nullptr, &errMessage);
+	return getUser(m_id);
+}
+
+Picture DatabaseAccess::getTopTaggedPicture()
+{
+	int currentMax = -1;
+	const Picture* mostTaggedPic = nullptr;
+	getAlbums();
+	char* errMessage = nullptr;
+	const char* sqlStatement = "SELECT * FROM PICTURES;";
+	int res = sqlite3_exec(db, sqlStatement, callback_for_pictures, nullptr, &errMessage);
+	check_status(errMessage, res);
+	for (const auto& album : m_albums)
+	{
+		const std::list<Picture>& pics = album.getPictures();
+		for (const auto& picture : pics)
+		{
+			sqlStatement = "SELECT COUNT(PICTURE_ID) FROM TAGS WHERE PICTURE_ID = " + picture.getId();
+			int res = sqlite3_exec(db, sqlStatement,callback_tags, nullptr, &errMessage);
+			int tagsCount = m_tag_value;
+			if (tagsCount == 0) {
+				continue;
+			}
+
+			if (tagsCount <= currentMax) {
+				continue;
+			}
+
+			mostTaggedPic = &picture;
+			currentMax = tagsCount;
+		}
+	}
+	if (nullptr == mostTaggedPic) {
+		throw MyException("There isn't any tagged picture.");
+	}
+
+	return *mostTaggedPic;
+}
+
+std::list<Picture> DatabaseAccess::getTaggedPicturesOfUser(const User& user)
+{
+	getAlbums();
+	char* errMessage = nullptr;
+	 std::string sqlStatement = "SELECT * FROM PICTURES;";
+	int res = sqlite3_exec(db, sqlStatement.c_str(), callback_for_pictures, nullptr, &errMessage);
+	check_status(errMessage, res);
+	std::list<Picture> pictures;
+
+	for (const auto& album : m_albums) {
+		for (const auto& picture : album.getPictures()) {
+			sqlStatement = "SELECT * FROM TAGS WHERE  USER_ID = " + std::to_string(user.getId()) + "AND PICTURE_ID = " + std::to_string(picture.getId()) + ";";
+			int res = sqlite3_exec(db, sqlStatement.c_str(), callback_tags, nullptr, &errMessage);
+			if (is_taged)
+			{
+				pictures.push_back(picture);
+			}
+		}
+	}
+
+	return pictures;
 }

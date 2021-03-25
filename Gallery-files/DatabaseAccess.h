@@ -6,6 +6,7 @@
 std::list<Album> m_albums;
 std::list<User> m_users;
 static int m_id;
+static int m_tag_value;
 static bool is_taged;
 
 
@@ -60,7 +61,7 @@ public:
 	void close() override;
 
 private:
-	sqlite3* db;
+	static sqlite3* db;
 
 	auto getAlbumIfExists(const std::string& albumName);
 
