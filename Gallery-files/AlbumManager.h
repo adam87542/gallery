@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include <vector>
 #include "Constants.h"
-#include "MemoryAccess.h"
+#include "DatabaseAccess.h"
 #include "Album.h"
 
 
@@ -16,8 +16,9 @@ public:
 	using handler_func_t = void (AlbumManager::*)(void);    
 
 private:
-    int m_nextPictureId{};
-    int m_nextUserId{};
+   static int m_nextPictureId;
+   static int m_nextUserId;
+   static int m_nextAlbumId;
     std::string m_currentAlbumName{};
 	IDataAccess& m_dataAccess;
 	Album m_openAlbum;

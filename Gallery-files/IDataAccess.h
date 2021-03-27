@@ -26,6 +26,7 @@ public:
 	virtual void tagUserInPicture(const std::string& albumName, const std::string& pictureName, int userId) = 0;
 	virtual void untagUserInPicture(const std::string& albumName, const std::string& pictureName, int userId) = 0;
 
+
 	// user related
 	virtual void printUsers() =0;
 	virtual User getUser(int userId) = 0;
@@ -44,7 +45,10 @@ public:
 	virtual User getTopTaggedUser() = 0;
 	virtual Picture getTopTaggedPicture() = 0;
 	virtual std::list<Picture> getTaggedPicturesOfUser(const User& user) = 0;
-	
+	//helpers
+	virtual int get_next_id(const std::string table) = 0;
+
+
 	virtual bool open() = 0;
 	virtual void close() = 0;
 	virtual void clear() = 0;
