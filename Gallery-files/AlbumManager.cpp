@@ -315,7 +315,7 @@ void AlbumManager::removeUser()
 	const std::list<Album>& albums = m_dataAccess.getAlbumsOfUser(user);
 	for (auto& album : albums)
 	{
-		m_dataAccess.deleteAlbum(album.getName() , user.getId());
+		m_dataAccess.deleteAlbum(album.getName(), user.getId());
 	}
 	m_dataAccess.deleteUser(user);
 	std::cout << "User @" << userId << " deleted successfully." << std::endl;
@@ -337,6 +337,7 @@ void AlbumManager::userStatistics()
 	const User& user = m_dataAccess.getUser(userId);
 
 	std::cout << "user @" << userId << " Statistics:" << std::endl << "--------------------" << std::endl <<
+		"  + Count of owned albums: " << m_dataAccess.countAlbumsOwnedOfUser(user) << std::endl <<
 		"  + Count of Albums Tagged: " << m_dataAccess.countAlbumsTaggedOfUser(user) << std::endl <<
 		"  + Count of Tags: " << m_dataAccess.countTagsOfUser(user) << std::endl <<
 		"  + Avarage Tags per Album: " << m_dataAccess.averageTagsPerAlbumOfUser(user) << std::endl;
