@@ -1,4 +1,6 @@
 #include "DatabaseAccess.h"
+
+//init static var
 sqlite3* DatabaseAccess::db;
 
 //global vars
@@ -10,6 +12,8 @@ int m_id;
 int m_tag_value;
 bool m_is_taged;
 
+
+// ******************* Callback functions *******************
 int callback_for_albums(void* data, int argc, char** argv, char** azColName)
 {
 	Album album;
@@ -72,9 +76,9 @@ int callback_for_pictures(void* data, int argc, char** argv, char** azColName)
 				{
 					picture.set_AlbumId(album.getId());
 					DatabaseAccess::get_users_tag_in_picture(picture.getId());
-					for (auto& tag : m_users_tag)
+					for (auto& user_id: m_users_tag)
 					{
-						picture.tagUser(tag);
+						picture.tagUser(user_id);
 					}
 					m_users_tag.clear();
 					album.addPicture(picture);
@@ -90,7 +94,7 @@ int callback_for_users(void* data, int argc, char** argv, char** azColName)
 {
 	int user_id = 0;
 	std::string name;
-	for (int i = 0; i < argc; i++)
+	for (unsigned int i = 0; i < argc; i++)
 	{
 		if (std::string(azColName[i]) == "ID") {
 			user_id = atoi(argv[i]);
@@ -103,22 +107,25 @@ int callback_for_users(void* data, int argc, char** argv, char** azColName)
 	m_users.push_back(user);
 	return 0;
 }
+
+//used for debugging
+
 int callback_print(void* data, int argc, char** argv, char** azColName)
 {
-	for (int i = 0; i < argc && *argv != nullptr; i++)
+	for (unsigned int i = 0; i < argc && *argv != nullptr; i++)
 	{
 		cout << azColName[i] << " = " << argv[i] << " , ";
 	}
 	cout << endl;
 	return 0;
 }
+
 int callback_for_recevie_ID(void* data, int argc, char** argv, char** azColName)
 {
-	callback_print( data, argc, argv,azColName);
 	if (*argv != nullptr)
 	{
-		m_is_taged = true;
-		m_id = std::stoi(argv[0]);
+		m_is_taged = true; //this is used if we want to know if a user is tagged
+		m_id = std::stoi(argv[0]); // get the id , ussually we search for one specific id
 	}
 	else
 	{
@@ -127,6 +134,9 @@ int callback_for_recevie_ID(void* data, int argc, char** argv, char** azColName)
 	}
 	return 0;
 }
+
+
+// ******************* open and close DB *******************
 bool DatabaseAccess::open()
 {
 	const char* sqlStatement;
@@ -184,7 +194,7 @@ void DatabaseAccess::close()
 	db = nullptr;
 }
 
-
+// ******************* Helpers *******************
 bool DatabaseAccess::check_status(char* errMessage, int res)
 {
 	if (res != SQLITE_OK)
@@ -194,6 +204,20 @@ bool DatabaseAccess::check_status(char* errMessage, int res)
 	}
 	return true;
 }
+int DatabaseAccess::get_next_id(const std::string table)
+{
+	char* errMessage = nullptr;
+	std::string sqlStatement = "SELECT MAX(ID) FROM  " + table + ';';
+	int res = sqlite3_exec(db, sqlStatement.c_str(), callback_for_recevie_ID, nullptr, &errMessage);
+	check_status(errMessage, res);
+	return m_id + 1;
+}
+
+
+
+
+
+// ******************* Album ******************* 
 const std::list<Album> DatabaseAccess::getAlbums()
 {
 	m_albums.clear();
@@ -218,34 +242,54 @@ auto DatabaseAccess::getAlbumIfExists(const std::string& albumName)
 
 const std::list<Album> DatabaseAccess::getAlbumsOfUser(const User& user)
 {
+	m_albums.clear();
 	char* errMessage = nullptr;
 	const std::string sqlStatement = "SELECT * FROM ALBUMS WHERE USER_ID = " + std::to_string(user.getId()) + ';';
 	int res = sqlite3_exec(db, sqlStatement.c_str(), callback_for_albums, nullptr, &errMessage);
 	check_status(errMessage, res);
 	return m_albums;
 }
+
 void DatabaseAccess::createAlbum(const Album& album)
 {
 	char* errMessage = nullptr;
-	 const std::string sqlStatement = "INSERT INTO ALBUMS( ID , NAME  , CREATION_DATE, USER_ID) VALUES(" + std::to_string(album.getId()) + ",'" + album.getName() + "','" + album.getCreationDate() + "'," + std::to_string(album.getOwnerId()) + ");";
-	 cout << sqlStatement << endl;
+    const std::string sqlStatement = "INSERT INTO ALBUMS( ID , NAME  , CREATION_DATE, USER_ID) VALUES(" + std::to_string(album.getId()) + ",'" + album.getName() + "','" + album.getCreationDate() + "'," + std::to_string(album.getOwnerId()) + ");";
 	int res = sqlite3_exec(db, sqlStatement.c_str(), nullptr, nullptr, &errMessage);
 	check_status(errMessage, res);
 }
+
 void  DatabaseAccess::deleteAlbum(const std::string& albumName, int userId)
 {
 	doesAlbumExists(albumName,  userId);
 	char* errMessage = nullptr;
-	std::string sqlStatement = "DELETE FROM ALBUMS WHERE USER_ID = " + std::to_string(userId) + ';';
-	int res = sqlite3_exec(db, sqlStatement.c_str(), nullptr, nullptr, &errMessage);
+	
+	//Delete pictures from tags
+	std::string sqlStatement = "SELECT ID FROM ALBUMS WHERE NAME = '" + albumName + "';";
+	int res = sqlite3_exec(db, sqlStatement.c_str(), callback_for_recevie_ID, nullptr, &errMessage);
 	check_status(errMessage, res);
-	sqlStatement = "SELECT ID FROM ALBUMS WHERE NAME = '" + albumName + "';";
+
+	 sqlStatement = "SELECT ID FROM PICTURES WHERE ALBUM_ID = " + std::to_string(m_id) + ';';
+	 res = sqlite3_exec(db, sqlStatement.c_str(), callback_for_recevie_ID, nullptr, &errMessage);
+	 check_status(errMessage, res);
+
+	sqlStatement = "DELETE FROM TAGS WHERE PICTURE_ID = " + std::to_string(m_id) + ';';
 	res = sqlite3_exec(db, sqlStatement.c_str(), nullptr, nullptr, &errMessage);
 	check_status(errMessage, res);
+
+	//delete pictures and album
+	 sqlStatement = "SELECT ID FROM ALBUMS WHERE NAME = '" + albumName + "';";
+	 res = sqlite3_exec(db, sqlStatement.c_str(), callback_for_recevie_ID, nullptr, &errMessage);
+	check_status(errMessage, res);
+
 	sqlStatement = "DELETE FROM PICTURES WHERE ALBUM_ID = " + std::to_string(m_id) + ';';
 	res = sqlite3_exec(db, sqlStatement.c_str(), nullptr, nullptr, &errMessage);
 	check_status(errMessage, res);
+
+	 sqlStatement = "DELETE FROM ALBUMS WHERE NAME = '" + albumName + "';";
+	res = sqlite3_exec(db, sqlStatement.c_str(), nullptr, nullptr, &errMessage);
+	check_status(errMessage, res);
 }
+
 bool DatabaseAccess::doesAlbumExists(const std::string& albumName, int userId)
 {
 
@@ -257,6 +301,7 @@ bool DatabaseAccess::doesAlbumExists(const std::string& albumName, int userId)
 	}
 	return false;
 }
+
 Album  DatabaseAccess::openAlbum(const std::string& albumName)
 {
 	get_Albums_and_pictures();
@@ -268,6 +313,7 @@ Album  DatabaseAccess::openAlbum(const std::string& albumName)
 	}
 	throw MyException("No album with name " + albumName + " exists");
 }
+
 void DatabaseAccess::printAlbums()
 {
 	getAlbums();
@@ -284,7 +330,7 @@ void DatabaseAccess::printAlbums()
 
 
 
-
+// ******************* Picture ******************* 
 void DatabaseAccess::addPictureToAlbumByName(const std::string& albumName, const Picture& picture)
 {
 	 char* errMessage = nullptr;
@@ -299,8 +345,16 @@ void DatabaseAccess::addPictureToAlbumByName(const std::string& albumName, const
 void DatabaseAccess::removePictureFromAlbumByName(const std::string& albumName, const std::string& pictureName)
 {
 	char* errMessage = nullptr;
-	const std::string sqlStatement = "DELETE FROM PICTURES WHERE NAME = '" + pictureName + "';";
-	int res = sqlite3_exec(db, sqlStatement.c_str(), nullptr, nullptr, &errMessage);
+	std::string sqlStatement = "SELECT ID FROM PICTURE WHERE NAME = '" + pictureName + "';";
+	int res = sqlite3_exec(db, sqlStatement.c_str(), callback_for_recevie_ID, nullptr, &errMessage);
+	check_status(errMessage, res);
+
+	sqlStatement = "DELETE FROM TAGS WHERE PICTURE_ID = " + std::to_string(m_id) + ';';
+	res = sqlite3_exec(db, sqlStatement.c_str(), nullptr, nullptr, &errMessage);
+	check_status(errMessage, res);
+
+	sqlStatement = "DELETE FROM PICTURES WHERE NAME = '" + pictureName + "';";
+	res = sqlite3_exec(db, sqlStatement.c_str(), nullptr, nullptr, &errMessage);
 	check_status(errMessage, res);
 }
 
@@ -329,7 +383,7 @@ void DatabaseAccess::untagUserInPicture(const std::string& albumName, const std:
 	std::string sqlStatement = "SELECT ID FROM PICTURES WHERE NAME = '" + pictureName + "'" + ';';
 	int res = sqlite3_exec(db, sqlStatement.c_str(), callback_for_recevie_ID, nullptr, &errMessage);
 	check_status(errMessage, res);
-	sqlStatement = "DELETE FROM TAGS WHERE PICTURE_ID = " + std::to_string(m_id) + ';';
+	sqlStatement = "DELETE FROM TAGS WHERE PICTURE_ID = " + std::to_string(m_id) + "AND USER_ID = " + std::to_string(userId) + ';';
 	 res = sqlite3_exec(db, sqlStatement.c_str(), nullptr, nullptr, &errMessage);
 	check_status(errMessage, res);
 }
@@ -347,7 +401,7 @@ void DatabaseAccess::get_Albums_and_pictures()
 
 
 
-
+// ******************* User ******************* 
 void DatabaseAccess::printUsers()
 {
 	getUsers();
@@ -368,8 +422,11 @@ void DatabaseAccess::createUser(User& user)
 void DatabaseAccess::deleteUser(const User& user)
 {
 	char* errMessage = nullptr;
-	const std::string sqlStatement = "DELETE FROM USERS WHERE ID = "+ std::to_string(user.getId()) +" AND NAME = '" + user.getName()  + "';";
+	 std::string sqlStatement = "DELETE FROM USERS WHERE ID = "+ std::to_string(user.getId()) + ';';
 	int res = sqlite3_exec(db, sqlStatement.c_str(), nullptr, nullptr, &errMessage);
+	check_status(errMessage, res);
+	sqlStatement = "DELETE FROM TAGS WHERE USER_ID = " + std::to_string(user.getId()) + ';';
+	res = sqlite3_exec(db, sqlStatement.c_str(), nullptr, nullptr, &errMessage);
 	check_status(errMessage, res);
 }
 bool DatabaseAccess::doesUserExists(int userId)
@@ -413,7 +470,7 @@ void DatabaseAccess::getUsers()
 
 
 
-
+// ******************* Statistics ******************* 
 int DatabaseAccess::countAlbumsOwnedOfUser(const User& user)
 {
 	getAlbums();
@@ -471,11 +528,13 @@ float DatabaseAccess::averageTagsPerAlbumOfUser(const User& user)
 	return static_cast<float>(countTagsOfUser(user)) / albumsTaggedCount;
 }
 
+
+// ******************* Queries ******************* 
 User DatabaseAccess::getTopTaggedUser()
 {
 	char* errMessage = nullptr;
-	std::string sqlStatement = "SELECT  USER_ID, COUNT(PICTURE_ID) AS 'value_occurrence' FROM  TAGS GROUP BY  USER_ID ORDER BY 'value_occurrence' DESC  LIMIT  1;";
-	int res = sqlite3_exec(db, sqlStatement.c_str(), callback_for_recevie_ID, nullptr, &errMessage);
+	const char* sqlStatement = "SELECT  USER_ID, COUNT(PICTURE_ID) AS 'value_occurrence' FROM  TAGS GROUP BY  USER_ID ORDER BY 'value_occurrence' DESC  LIMIT  1;";
+	int res = sqlite3_exec(db, sqlStatement , callback_for_recevie_ID, nullptr, &errMessage);
 	check_status(errMessage, res);
 	return getUser(m_id);
 }
@@ -521,13 +580,4 @@ std::list<Picture> DatabaseAccess::getTaggedPicturesOfUser(const User& user)
 	}
 
 	return pictures;
-}
-
-int DatabaseAccess::get_next_id(const std::string table)
-{
-	char* errMessage = nullptr;
-	std::string sqlStatement = "SELECT MAX(ID) FROM  " + table + ';';
-	int res = sqlite3_exec(db, sqlStatement.c_str(), callback_for_recevie_ID, nullptr, &errMessage);
-	check_status(errMessage, res);
-	return m_id + 1;
 }
