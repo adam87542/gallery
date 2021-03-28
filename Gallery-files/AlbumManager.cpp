@@ -4,10 +4,6 @@
 #include "MyException.h"
 #include "AlbumNotOpenException.h"
 
-int AlbumManager::m_nextAlbumId = 0;
-int AlbumManager::m_nextPictureId = 0;
-int AlbumManager::m_nextUserId = 0;
-
 AlbumManager::AlbumManager(IDataAccess& dataAccess) :
     m_dataAccess(dataAccess) 
 {
