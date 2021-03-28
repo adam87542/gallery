@@ -4,12 +4,13 @@
 #include "MyException.h"
 #include "AlbumNotOpenException.h"
 
-
 AlbumManager::AlbumManager(IDataAccess& dataAccess) :
-    m_dataAccess(dataAccess), m_nextPictureId(100), m_nextUserId(200)
+    m_dataAccess(dataAccess) 
 {
-	// Left empty
 	m_dataAccess.open();
+	m_nextPictureId = m_dataAccess.get_next_id("PICTURES");
+    m_nextUserId = m_dataAccess.get_next_id("USERS");
+	m_nextAlbumId = m_dataAccess.get_next_id("ALBUMS");
 }
 
 void AlbumManager::executeCommand(CommandType command) {
@@ -52,9 +53,9 @@ void AlbumManager::createAlbum()
 	if ( m_dataAccess.doesAlbumExists(name,userId) ) {
 		throw MyException("Error: Failed to create album, album with the same name already exists\n");
 	}
-
-	Album newAlbum(userId,name);
+	Album newAlbum(userId,name ,m_nextAlbumId);
 	m_dataAccess.createAlbum(newAlbum);
+	m_nextAlbumId++;
 
 	std::cout << "Album [" << newAlbum.getName() << "] created successfully by user@" << newAlbum.getOwnerId() << std::endl;
 }
@@ -150,12 +151,12 @@ void AlbumManager::addPictureToAlbum()
 		throw MyException("Error: Failed to add picture, picture with the same name already exists.\n");
 	}
 	
-	Picture picture(++m_nextPictureId, picName);
+	Picture picture(m_nextPictureId, picName);
 	std::string picPath = getInputFromConsole("Enter picture path: ");
 	picture.setPath(picPath);
 
 	m_dataAccess.addPictureToAlbumByName(m_openAlbum.getName(), picture);
-
+	m_nextPictureId++;
 	std::cout << "Picture [" << picture.getId() << "] successfully added to Album [" << m_openAlbum.getName() << "]." << std::endl;
 }
 
@@ -176,10 +177,9 @@ void AlbumManager::removePictureFromAlbum()
 void AlbumManager::listPicturesInAlbum()
 {
 	refreshOpenAlbum();
-
 	std::cout << "List of pictures in Album [" << m_openAlbum.getName() 
 			  << "] of user@" << m_openAlbum.getOwnerId() <<":" << std::endl;
-	
+
 	const std::list<Picture>& albumPictures = m_openAlbum.getPictures();
 	for (auto iter = albumPictures.begin(); iter != albumPictures.end(); ++iter) {
 		std::cout << "   + Picture [" << iter->getId() << "] - " << iter->getName() << 
@@ -309,8 +309,9 @@ void AlbumManager::removeUser()
 		closeAlbum();
 	}
 	const std::list<Album>& albums = m_dataAccess.getAlbumsOfUser(user);
-	for (const auto& album : albums) {
-		m_dataAccess.deleteAlbum(album.getName(), userId);
+	for (auto& album : albums)
+	{
+		m_dataAccess.deleteAlbum(album.getName(), user.getId());
 	}
 	m_dataAccess.deleteUser(user);
 	std::cout << "User @" << userId << " deleted successfully." << std::endl;
@@ -335,7 +336,7 @@ void AlbumManager::userStatistics()
 		"  + Count of owned albums: " << m_dataAccess.countAlbumsOwnedOfUser(user) << std::endl <<
 		"  + Count of Albums Tagged: " << m_dataAccess.countAlbumsTaggedOfUser(user) << std::endl <<
 		"  + Count of Tags: " << m_dataAccess.countTagsOfUser(user) << std::endl <<
-		"  + Avarage Tags per Alboum: " << m_dataAccess.averageTagsPerAlbumOfUser(user) << std::endl;
+		"  + Avarage Tags per Album: " << m_dataAccess.averageTagsPerAlbumOfUser(user) << std::endl;
 }
 
 

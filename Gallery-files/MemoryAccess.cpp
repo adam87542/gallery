@@ -51,12 +51,11 @@ auto MemoryAccess::getAlbumIfExists(const std::string & albumName)
 	return result;
 
 }
-
 Album MemoryAccess::createDummyAlbum(const User& user)
 {
 	std::stringstream name("Album_" +std::to_string(user.getId()));
 
-	Album album(user.getId(),name.str());
+	Album album(user.getId(),name.str() , 1);
 
 	for (int i=1; i<3; ++i)	{
 		std::stringstream picName("Picture_" + std::to_string(i));

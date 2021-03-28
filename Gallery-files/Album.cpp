@@ -4,8 +4,8 @@
 #include <sstream>
 
 
-Album::Album(int ownerId, const std::string& name) :
-	m_ownerId(ownerId), m_name(name), m_pictures{}
+Album::Album(int ownerId, const std::string& name , const int AlbumId) :
+	m_ownerId(ownerId), m_name(name), m_pictures{} , m_AlbumId(AlbumId)
 {
 	setCreationDateNow();
 }
@@ -15,7 +15,14 @@ Album::Album(int ownerId, const std::string & name, const std::string & creation
 {
 	// Left empty
 }
-
+int Album::getId() const
+{
+	return m_AlbumId;
+}
+void Album::setId(int Id)
+{
+	this->m_AlbumId = Id;
+}
 
 const std::string& Album::getName() const
 {

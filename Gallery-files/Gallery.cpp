@@ -1,8 +1,8 @@
 #include <iostream>
 #include <string>
+#include "DatabaseAccess.h"
 #include <chrono> 
 #include <ctime> 
-#include "MemoryAccess.h"
 #include "AlbumManager.h"
 
 int getCommandNumberFromUser()
@@ -36,7 +36,7 @@ void Print_dev_name_and_curr_time()
 int main(void)
 {
 	// initialization data access
-	MemoryAccess dataAccess;
+	DatabaseAccess dataAccess;
 
 	// initialize album manager
 	AlbumManager albumManager(dataAccess);
