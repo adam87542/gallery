@@ -1,5 +1,6 @@
 ﻿#include "AlbumManager.h"
 #include <iostream>
+#include <Windows.h>
 #include "Constants.h"
 #include "MyException.h"
 #include "AlbumNotOpenException.h"
@@ -38,7 +39,6 @@ void AlbumManager::printHelp() const
 		std::cout << std::endl;
 	}
 }
-
 
 // ******************* Album ******************* 
 void AlbumManager::createAlbum()
@@ -202,11 +202,16 @@ void AlbumManager::showPicture()
 	if ( !fileExistsOnDisk(pic.getPath()) ) {
 		throw MyException("Error: Can't open <" + picName+ "> since it doesnt exist on disk.\n");
 	}
-
-	// Bad practice!!!
-	// Can lead to privileges escalation
-	// You will replace it on WinApi Lab(bonus)
-	system(pic.getPath().c_str()); 
+		STARTUPINFO info = { sizeof(info) };
+		PROCESS_INFORMATION processInfo;
+		std::string p = pic.getPath();
+		std::string cmd = "C:\\Windows\\system32\\mspaint.exe \"" + p + "\"";
+		if (CreateProcessA(NULL, const_cast<LPSTR>(cmd.c_str()), NULL, NULL, FALSE, 0, NULL, NULL, &info, &processInfo))
+		{
+			WaitForSingleObject(processInfo.hProcess, INFINITE);
+			CloseHandle(processInfo.hProcess);
+			CloseHandle(processInfo.hThread);
+		}
 }
 
 void AlbumManager::tagUserInPicture()

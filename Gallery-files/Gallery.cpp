@@ -1,9 +1,12 @@
 #include <iostream>
+#include <signal.h>
+#include <stdlib.h>
 #include <string>
 #include "DatabaseAccess.h"
 #include <chrono> 
 #include <ctime> 
 #include "AlbumManager.h"
+
 
 int getCommandNumberFromUser()
 {
@@ -31,7 +34,7 @@ int getCommandNumberFromUser()
 void Print_dev_name_and_curr_time()
 {
 	auto currtime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-	std::cout << "by adam shamis version 1.0.1, current time : " << ctime(&currtime) << std::endl;
+	std::cout << "by adam shamis version 1.0.2, current time : " << ctime(&currtime) << std::endl;
 }
 int main(void)
 {
@@ -40,7 +43,6 @@ int main(void)
 
 	// initialize album manager
 	AlbumManager albumManager(dataAccess);
-
 
 	std::string albumName;
 	std::cout << " Welcome to Gallery! ";
