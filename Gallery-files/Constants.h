@@ -3,7 +3,7 @@
 #include <vector>
 #include <map>
 
-enum CommandType
+enum  CommandType
 {
 	HELP = 0,
 	// Album operations
