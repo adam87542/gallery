@@ -1,8 +1,30 @@
 ﻿#include "AlbumManager.h"
 #include <iostream>
+#include <Windows.h>
+#include <tchar.h>
+#include <psapi.h>
 #include "Constants.h"
 #include "MyException.h"
 #include "AlbumNotOpenException.h"
+#define EXIT_CODE 9
+
+PROCESS_INFORMATION processInfo;
+
+BOOL WINAPI consoleHandler(DWORD signal) 
+{
+	if (signal == CTRL_C_EVENT)
+	{
+		cout << "Ctrl-C handled" << endl;
+		if (processInfo.hProcess != nullptr)
+		{
+			TerminateProcess(processInfo.hProcess, EXIT_CODE);
+			CloseHandle(processInfo.hProcess);
+			CloseHandle(processInfo.hThread);
+		}
+	}
+
+	return TRUE;
+}
 
 AlbumManager::AlbumManager(IDataAccess& dataAccess) :
     m_dataAccess(dataAccess) 
@@ -38,7 +60,6 @@ void AlbumManager::printHelp() const
 		std::cout << std::endl;
 	}
 }
-
 
 // ******************* Album ******************* 
 void AlbumManager::createAlbum()
@@ -202,11 +223,39 @@ void AlbumManager::showPicture()
 	if ( !fileExistsOnDisk(pic.getPath()) ) {
 		throw MyException("Error: Can't open <" + picName+ "> since it doesnt exist on disk.\n");
 	}
+	    int option = 0;
+		std::string cmd;
+		STARTUPINFO info = { sizeof(info) };
+		std::string p = pic.getPath();
+		do
+		{
+			cout << "Choose 1 for paint or 2 for IrfanView: ";
+			std::cin >> option;
+			std::cin.ignore();
+			if (option == 1)
+			{
+				cmd = "C:\\Windows\\system32\\mspaint.exe \"" + p + "\"";
+			}
+			else if (option == 2)
+			{
+				cmd = "C:\\Program Files\\IrfanView\\i_view64.exe \"" + p + "\"";
+			}
+			else
+			{
+				cout << "Invalid option " << endl;
+			}
 
-	// Bad practice!!!
-	// Can lead to privileges escalation
-	// You will replace it on WinApi Lab(bonus)
-	system(pic.getPath().c_str()); 
+		} while (option != 1 && option != 2);
+
+		SetConsoleCtrlHandler(consoleHandler, TRUE);
+
+		if (CreateProcessA(NULL, (LPSTR)cmd.c_str(), NULL, NULL, FALSE, 0, NULL, NULL, &info, &processInfo))
+		{
+
+			WaitForSingleObject(processInfo.hProcess, INFINITE);
+			CloseHandle(processInfo.hProcess);
+			CloseHandle(processInfo.hThread);
+		}
 }
 
 void AlbumManager::tagUserInPicture()
