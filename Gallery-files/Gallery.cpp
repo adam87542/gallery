@@ -34,7 +34,7 @@ int getCommandNumberFromUser()
 void Print_dev_name_and_curr_time()
 {
 	auto currtime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-	std::cout << "by adam shamis version 1.0.2, current time : " << ctime(&currtime) << std::endl;
+	std::cout << "by adam shamis version 1.0.3, current time : " << ctime(&currtime) << std::endl;
 }
 int main(void)
 {
